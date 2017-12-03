@@ -1,0 +1,133 @@
+#!/usr/bin/env ruby
+lib = File.expand_path("../../lib", __FILE__)
+unless $LOAD_PATH.include?(lib)
+  $LOAD_PATH.unshift(lib)
+  require 'rubocoin'
+end
+
+def return_invalid_json
+  { :message => 'ERROR: Please supply valid JSON' }.to_json
+end
+
+class Rubocoind < Sinatra::Base
+
+  set :environment, :production
+  set :port, 44856
+  set :logging, true
+
+  # Create the blockchain
+  blockchain = Blockchain.new
+
+  node_id = SecureRandom.uuid.delete('-')
+
+  # Node addresses always start in 'R'
+  node_id[0] = 'R'
+
+
+  # Lets mine!
+  get '/mine' do
+    last_block = blockchain.last_block
+    last_proof = last_block[:proof]
+    proof = blockchain.proof_of_work(last_proof)
+
+    # Distribute reward for finding the proof
+    blockchain.new_transaction('network', node_id, blockchain.calculate_reward_amount)
+
+    # Add a new block to the chain
+    block = blockchain.new_block(proof)
+
+    res = {
+      message: "New block forged",
+      index: block[:index],
+      transactions: block[:transactions],
+      proof: block[:proof],
+      previous_hash: block[:previous_hash]
+    }
+
+    status 200
+    res.to_json
+  end
+
+  # Make a new transaction and add it to the blockchain
+  post '/transactions/new' do
+    req_body = request.body.read
+
+    unless JSON.is_valid?(req_body)
+      status 400
+      return return_invalid_json
+    end
+
+    values = JSON.parse(req_body)
+
+    required = ['amount', 'sender', 'recipient']
+
+    unless required.all? { |e| values.key?(e) }
+      status 400
+      return { :message => 'ERROR: Missing values' }.to_json
+    end
+
+    # Create a new transaction
+    index = blockchain.new_transaction(values['sender'], values['recipient'],
+      values['amount'], values['others'])
+
+    res = { message: "Transaction successful. It will be added to the blockchain at block #{index}" }
+    status 201
+    res.to_json
+  end
+
+  # Return the current blockchain
+  get '/chain' do
+    res = {
+      chain: blockchain.chain,
+      length: blockchain.chain.size
+    }
+    res.to_json
+  end
+
+  post '/register_node' do
+    request.body.rewind
+    req_body = request.body.read
+
+    # Check if the json sent to us is valid
+    unless JSON.is_valid?(req_body)
+      status 400
+      return return_invalid_json
+    end
+
+    values = JSON.parse(req_body)
+
+    nodes = values[:nodes]
+
+    # Check if a list was even sent to us
+    if nodes.nil?
+      status 400
+      return 'ERROR: Please supply a valid node list'
+    end
+
+    nodes.each do |node|
+      blockchain.register_node(node)
+    end
+
+    res = { message: "Nodes have been added successfully", total_nodes: blockchain.nodes }
+
+    status 201
+    res.to_json
+  end
+
+  get '/resolve_node' do
+    replaced = blockchain.resolve_conflicts
+
+    if replaced
+      res = { message: 'Chain successfully replaced', new_chain: blockchain.chain }
+    else
+      res = { message: 'Our chain is authoritative', chain: blockchain.chain }
+    end
+
+    status 200
+    return res.to_json
+  end
+end
+
+
+# TODO add cli opts
+Rubocoind.run!
