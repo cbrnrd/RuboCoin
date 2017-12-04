@@ -5,6 +5,44 @@ unless $LOAD_PATH.include?(lib)
   require 'rubocoin'
 end
 
+daemonize = false
+
+parser = OptionParser.new do |opts|
+
+  opts.banner = "Usage #{File.basename($PROGRAM_NAME)} [options]"
+
+  opts.on('-d', '--daemon', 'Run the node in the background') do
+    daemonize = true
+  end
+
+  opts.on('-k', '--kill-daemon', 'Kill the rubocoind service if it\'s running') do
+    unless File.file?('/tmp/rubocoind.pid')
+      puts 'The rubocoin daemon doesn\'t seem to be running'
+      exit 0
+    end
+    pid = File.read('/tmp/rubocoind.pid')
+    # Check validity of pid file (no code injection for you)
+    if pid.to_s =~ /^[A-Z+$]/i
+      puts 'PID file is not in the correct format'
+      exit 0
+    end
+    system("kill #{pid}")
+  end
+
+  opts.on('--version', 'Show the current version and exit') do
+    puts Rubocoin::VERSION
+    exit 0
+  end
+
+  opts.on_tail('-h', '--help', 'Show this help message and exit') do
+    puts opts
+    exit 0
+  end
+end
+
+parser.parse!
+
+
 def return_invalid_json
   { :message => 'ERROR: Please supply valid JSON' }.to_json
 end
@@ -132,41 +170,6 @@ class Rubocoind < Sinatra::Base
   end
 end
 
-
-daemonize = false
-
-OptionParser.new do |opts|
-
-  opts.banner = "Usage #{File.basename($PROGRAM_NAME) [options]}"
-
-  opts.on('-d', '--daemon', 'Run the node in the background') do
-    daemonize = true
-  end
-
-  opts.on('-k', '--kill-daemon', 'Kill the rubocoind service if it\'s running') do
-    unless File.file?('/tmp/rubocoind.pid')
-      puts 'The rubocoin daemon doesn\'t seem to be running'
-      exit 0
-    end
-    pid = File.read('/tmp/rubocoind.pid')
-    # Check validity of pid file (no code injection for you)
-    if pid ~= /^[A-Z+$]/i
-      puts 'PID file is not in the correct format'
-      exit 0
-    end
-    system("kill #{pid}")
-  end
-
-  opts.on('--version', 'Show the current version and exit') do
-    puts Rubocoin::Version
-    exit 0
-  end
-
-  opts.on_tail('-h', '--help', 'SHow this help message and exit') do
-    puts opts
-    exit 0
-  end
-end.parse!
 
 if daemonize
   fork do
