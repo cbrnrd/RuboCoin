@@ -170,12 +170,11 @@ class Rubocoind < Sinatra::Base
   end
 end
 
-
 if daemonize
   fork do
     Rubocoind.run!
   end
+  exit 0
 end
 
-# TODO add cli opts
 Rubocoind.run!
