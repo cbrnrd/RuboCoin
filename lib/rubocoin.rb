@@ -1,6 +1,5 @@
 # Gems
 require 'sinatra'
-require 'json'
 require 'securerandom'
 require 'optparse'
 

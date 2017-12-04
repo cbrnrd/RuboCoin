@@ -13,6 +13,7 @@ or you can download the gem from [RubyGems](https://rubygems.org).
 
 ```
 $ git clone https://github.com/cbrnrd/RuboCoin
+$ cd RuboCoin
 $ bundle install
 $ bundle exec bin/rubocoind
 ```
@@ -28,7 +29,7 @@ $ rubocoind
 
 All you have to do is open port 44856 and run `rubocoind`.
 
-More command line options are coming in the near future.
+You can view the API documentation [here](http://www.rubydoc.info/gems/rubocoin/0.1.0)
 
 ## Development
 

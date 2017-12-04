@@ -45,18 +45,22 @@ class Blockchain
 
   #
   # Register a new node
+  # @param addr [String] the ip address of the node to add
   #
   def register_node(addr)
     url = URI.parse(addr)
     @nodes.add("#{url.host}:#{url.port}")
   end
 
-  # Return the most recent block in our chain
+  # Return the most recent block in the chain
   def last_block
     @chain[-1]
   end
 
+  #
   # Check whether a chain is valid
+  # @param chain [Array] the chain to validate
+  #
   def valid_chain(chain)
     last_block = chain[0]
     index = 1
@@ -80,6 +84,10 @@ class Blockchain
     true  # If we got here, all blocks are valid; therefore the chain is valid
   end
 
+  #
+  # Resolve conflicts with neighbour nodes. This gets the chain of each of
+  # the neighbour nodes and checks it with ours.
+  #
   def resolve_conflicts
     neighbour_nodes = @nodes
     new_chain = nil
@@ -113,6 +121,12 @@ class Blockchain
     return false
   end
 
+  #
+  # Adds a new block to the blockchain
+  # @see Blockchain#valid_proof
+  # @param proof [Integer] A valid value from the proof of work algorithm
+  # @param previous_hash [String] the hash of the previous block in the blockchain
+  #
   def new_block(proof, previous_hash=nil)
     # Define the block structure
     block =
@@ -174,11 +188,20 @@ class Blockchain
     last_block[:index] + 1
   end
 
+  #
+  # Hash the last block in the chain
+  # @param last_block [Hash] The last block in the chain
+  #
   def hash(last_block)
     block_string = last_block.sort.to_h.to_json
     return Digest::SHA256.hexdigest(block_string)
   end
 
+  #
+  # Iterates through integers until it finds a valid value
+  # @see Blockchain#valid_proof
+  # @param last_proof [Integer] the value of whatever the last PoW was
+  #
   def proof_of_work(last_proof)
     proof = -1
     proof += 1 until valid_proof(last_proof, proof)
@@ -186,6 +209,11 @@ class Blockchain
     return proof
   end
 
+  #
+  # Checks whether a value is a valid PoW
+  # @param last_proof [Integer] the value of whatever the last PoW was
+  # @param proof [Integer] the value to check
+  #
   def valid_proof(last_proof, proof)
     guess = "#{last_proof}#{proof}"
     guess_hash = Digest::SHA256.hexdigest(guess)
