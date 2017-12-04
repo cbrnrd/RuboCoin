@@ -7,7 +7,7 @@ This gem is the full node you can run on your machine to mine rubocoin and handl
 ## Installation
 
 You have 2 ways to get the rubocoin node (`rubocoind`). You can grab the source code
-or you can download the gem from (RubyGems)[https://rubygems.org].
+or you can download the gem from [RubyGems](https://rubygems.org).
 
 #### Installing from source
 
