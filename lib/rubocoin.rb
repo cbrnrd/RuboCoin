@@ -2,6 +2,7 @@
 require 'sinatra'
 require 'json'
 require 'securerandom'
+require 'optparse'
 
 require 'rubocoin/version'
 

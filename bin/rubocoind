@@ -18,6 +18,10 @@ class Rubocoind < Sinatra::Base
   # Create the blockchain
   blockchain = Blockchain.new
 
+  pid = File.open('/tmp/rubocoind.pid', 'w') do |f|
+    f.print(Process.pid)
+  end
+
   node_id = SecureRandom.uuid.delete('-')
 
   # Node addresses always start in 'R'
@@ -128,6 +132,47 @@ class Rubocoind < Sinatra::Base
   end
 end
 
+
+daemonize = false
+
+OptionParser.new do |opts|
+
+  opts.banner = "Usage #{File.basename($PROGRAM_NAME) [options]}"
+
+  opts.on('-d', '--daemon', 'Run the node in the background') do
+    daemonize = true
+  end
+
+  opts.on('-k', '--kill-daemon', 'Kill the rubocoind service if it\'s running') do
+    unless File.file?('/tmp/rubocoind.pid')
+      puts 'The rubocoin daemon doesn\'t seem to be running'
+      exit 0
+    end
+    pid = File.read('/tmp/rubocoind.pid')
+    # Check validity of pid file (no code injection for you)
+    if pid ~= /^[A-Z+$]/i
+      puts 'PID file is not in the correct format'
+      exit 0
+    end
+    system("kill #{pid}")
+  end
+
+  opts.on('--version', 'Show the current version and exit') do
+    puts Rubocoin::Version
+    exit 0
+  end
+
+  opts.on_tail('-h', '--help', 'SHow this help message and exit') do
+    puts opts
+    exit 0
+  end
+end.parse!
+
+if daemonize
+  fork do
+    Rubocoind.run!
+  end
+end
 
 # TODO add cli opts
 Rubocoind.run!
